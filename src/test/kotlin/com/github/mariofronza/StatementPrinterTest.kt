@@ -1,7 +1,11 @@
 package com.github.mariofronza
 
+import com.github.mariofronza.input.InvoiceInput
+import com.github.mariofronza.input.PerformanceInput
+import com.github.mariofronza.input.PlayInput
 import org.junit.jupiter.api.Assertions.*
 import kotlin.test.Test
+import kotlin.test.assertEquals
 
 class StatementPrinterTest {
 
@@ -9,16 +13,16 @@ class StatementPrinterTest {
     @Test
     fun `given a valid input should print the correct statement when calls print`() {
         val plays = mapOf(
-            "hamlet" to Play("Hamlet", "tragedy"),
-            "as-like" to Play("As You Like It", "comedy"),
-            "othello" to Play("Othello", "tragedy")
+            "hamlet" to PlayInput("Hamlet", "tragedy"),
+            "as-like" to PlayInput("As You Like It", "comedy"),
+            "othello" to PlayInput("Othello", "tragedy")
         )
 
-        val invoice = Invoice(
+        val invoice = InvoiceInput(
             "BigCo", listOf(
-                Performance("hamlet", 55),
-                Performance("as-like", 35),
-                Performance("othello", 40)
+                PerformanceInput("hamlet", 55),
+                PerformanceInput("as-like", 35),
+                PerformanceInput("othello", 40)
             )
         )
 
@@ -32,27 +36,27 @@ class StatementPrinterTest {
             
         """.trimIndent()
 
-        val statementPrinter = StatementPrinter()
-        val actual = statementPrinter.print(invoice, plays)
+        val statementPrinter = StatementPrinter(invoice, plays)
+        val actual = statementPrinter.statement()
 
-        kotlin.test.assertEquals(expected, actual)
+        assertEquals(expected, actual)
     }
 
     @Test
     fun `statement with new play types`() {
         val plays = mapOf(
-            "henry-v" to Play("Henry V", "history"),
-            "as-like" to Play("As You Like It", "pastoral")
+            "henry-v" to PlayInput("Henry V", "history"),
+            "as-like" to PlayInput("As You Like It", "pastoral")
         )
 
-        val invoice = Invoice(
+        val invoice = InvoiceInput(
             "BigCo", listOf(
-                Performance("henry-v", 53),
-                Performance("as-like", 55)
+                PerformanceInput("henry-v", 53),
+                PerformanceInput("as-like", 55)
             )
         )
 
-        val statementPrinter = StatementPrinter()
-        assertThrows(Error::class.java) { statementPrinter.print(invoice, plays) }
+        val statementPrinter = StatementPrinter(invoice, plays)
+        assertThrows(Error::class.java) { statementPrinter.statement() }
     }
 }

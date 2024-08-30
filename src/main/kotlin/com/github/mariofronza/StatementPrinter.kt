@@ -1,55 +1,57 @@
 package com.github.mariofronza
 
-import java.text.NumberFormat
-import java.util.*
-import kotlin.math.floor
-import kotlin.math.max
+import com.github.mariofronza.input.InvoiceInput
+import com.github.mariofronza.input.PerformanceInput
+import com.github.mariofronza.input.PlayInput
+import java.text.NumberFormat.getCurrencyInstance
+import java.util.Locale.US
 
-class StatementPrinter {
+class StatementPrinter(
+    private val invoice: InvoiceInput,
+    private val plays: Map<String, PlayInput>
+) {
 
-    fun print(invoice: Invoice, plays: Map<String, Play>): String {
-        var totalAmount = 0
-        var volumeCredits = 0
-        var result = "Statement for ${invoice.customer}\n"
+    fun statement(): String {
+        return renderPlaintText(createStatement())
+    }
 
-        val format = { number: Long -> NumberFormat.getCurrencyInstance(Locale.US).format(number) }
-
-        invoice.performances.forEach { perf ->
-            val play = plays.getValue(perf.playID)
-            var thisAmount = 0
-
-            when (play.type) {
-                "tragedy" -> {
-                    thisAmount = 40000
-                    if (perf.audience > 30) {
-                        thisAmount += 1000 * (perf.audience - 30)
-                    }
-                }
-
-                "comedy" -> {
-                    thisAmount = 30000
-                    if (perf.audience > 20) {
-                        thisAmount += 10000 + 500 * (perf.audience - 20)
-                    }
-                    thisAmount += 300 * perf.audience
-                }
-
-                else -> throw Error("unknown type: {play.type}")
-            }
-
-            // add volume credits
-            volumeCredits += max(perf.audience - 30, 0)
-            // add extra credit for every ten comedy attendees
-            if ("comedy" == play.type) volumeCredits += floor((perf.audience / 5).toDouble()).toInt()
-
-            // print line for this order
-            result += "  ${play.name}: ${format((thisAmount / 100).toLong())} (${perf.audience} seats)\n"
-
-            totalAmount += thisAmount
+    private fun renderPlaintText(data: Statement): String {
+        var result = "Statement for ${data.customer}\n"
+        data.performances.forEach { perf ->
+            result += "  ${perf.play.name}: ${usd((perf.amount).toLong())} (${perf.audience} seats)\n"
         }
-        result += "Amount owed is ${format((totalAmount / 100).toLong())}\n"
-        result += "You earned $volumeCredits credits\n"
+        result += "Amount owed is ${usd((data.totalAmount).toLong())}\n"
+        result += "You earned ${data.totalVolumeCredits} credits\n"
         return result
     }
+
+    private fun createStatement() = Statement(
+        customer = invoice.customer,
+        performances = invoice.performances.map(::createPerformance)
+    )
+
+    private fun createPerformance(performanceInput: PerformanceInput): Performance {
+        val calculator = createPerformanceCalculator(
+            performanceInput = performanceInput,
+            playInput = playFor(performanceInput)
+        )
+        return performanceInput.toPerformance(
+            playInput = calculator.play,
+            amount = calculator.amount(),
+            volumeCredits = calculator.volumeCredits()
+        )
+    }
+
+    private fun createPerformanceCalculator(performanceInput: PerformanceInput, playInput: PlayInput) =
+        when (playInput.type) {
+            "tragedy" -> PerformanceCalculator(playInput, calculator = TragedyCalculator(performanceInput))
+            "comedy" -> PerformanceCalculator(playInput, calculator = ComedyCalculator(performanceInput))
+            else -> throw Error("unknown type: ${playInput.type}")
+        }
+
+    private fun usd(number: Long) = getCurrencyInstance(US).format(number / 100)
+
+    private fun playFor(aPerformance: PerformanceInput) = plays.getValue(aPerformance.playID)
+
 
 }
