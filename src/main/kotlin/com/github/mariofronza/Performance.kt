@@ -1,3 +1,10 @@
 package com.github.mariofronza
 
-data class Performance(val playID: String, val audience: Int)
+import com.github.mariofronza.input.PlayInput
+
+data class Performance(
+    val play: PlayInput,
+    val audience: Int,
+    val amount: Int,
+    val volumeCredits: Int
+)
